@@ -1,5 +1,6 @@
-﻿namespace WAM
+﻿namespace WAMUtil
 
+[<AutoOpen>]
 module Util = 
   [<AutoOpen>]
   module List = 

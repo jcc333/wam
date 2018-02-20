@@ -1,0 +1,52 @@
+﻿{
+module Lex
+
+open System
+open System.Text
+open Tokens
+open Lexing
+}
+
+let digit = ['0'-'9']
+let stringLiteral = 
+let var = ['A'-'Z' '_']['a'-'z' 'A'-'Z' '0'-'9' '_']*
+let unquotedAtom = ['a'-'z']['a'-'z' 'A'-'Z' '0'-'9' '_']*
+let whitespace = [' ' '\t' ]
+let newline = "\n\r" | '\r' | '\n'
+let spceialChar = '#' | '$' | '&' | '*' | '-' | '.' | '/' | ':' | '<' | '=' | '>' | '?' | '@' | '^' | '~' | '\\'
+let stringLiteral =  '"' ([^\n\"\\]*(\\[.\n])*)
+(* "\"([^\n\"\\]*(\\[.\n])*)*"\" *)
+
+rule tokenize = parse
+| whitespace    { tokenize lexbuf }
+| newline       { newline lexbuf; parsetokens lexbuf }
+
+| ['-']?digit+('.'digit+)?(['e''E']digit+)?   { Token.Double (Double.Parse(lexeme lexbuf)) }
+| ['-']?digit+                                { Token.Int (Int32.Parse(lexeme lexbuf)) }
+
+| stringLiteral                               { Token.String(lexeme lexbuf) }
+
+| '_' { Token.Skolem }
+| var { Token.Var(lexeme lexbuf) }
+
+| spceialChar+                                { Token.Infix(lexeme lexbuf)
+| uquotedAtom { Token.Atom(lexeme lexbuf) }
+| "[]" { Token.EmptyList }
+| "{}" { Token.EmptyTuple }
+
+| "(" { Token.Paren(Open) }
+| ")" { Token.Paren(Close) }
+
+| "{" { Token.CurlyBrace(Open) }
+| "}" { Token.CurlyBrace(Close) }
+
+| "[" { Token.SquareBracket(Open) }
+| "]" { Token.SquareBracket(Close) }
+
+| ','                 { Token.Comma }
+| ';'                 { Token.Semi }
+| '.'                 { Token.Period }
+| '!'                 { Token.Cut }
+| ":-"                { Token.Turnstyle }
+
+| eof { Token.EOF }
