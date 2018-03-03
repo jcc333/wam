@@ -1,4 +1,4 @@
-﻿namespace WAMUtil
+﻿namespace Util
 
 [<AutoOpen>]
 module Util = 
@@ -23,14 +23,14 @@ module Util =
   
   [<AutoOpen>]
   [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-  module ResultPrelude = 
-    let guard f formatError = 
-      try 
+  module ResultPrelude =
+    let guard f formatError =
+      try
         Success(f())
       with e -> Error(formatError e)
     
-    module Result = 
-      let inline substitute (forError: 'Err -> 'Outcome) (forSuccess: 'Value -> 'Outcome) (result: Result<'Err, 'Value>) = 
+    module Result =
+      let inline substitute (forError: 'Err -> 'Outcome) (forSuccess: 'Value -> 'Outcome) (result: Result<'Err, 'Value>) =
         match result with
         | Error err -> forError err
         | Success value -> forSuccess value
@@ -38,17 +38,17 @@ module Util =
       let andThen f (result: Result<'Err, 'ValueA>): Result<'Err, 'ValueB> = result |> substitute Error f
       let bind = andThen
       
-      let andGuard f formatError (result: Result<'Err, 'ValueA>): Result<'Err, 'ValueB> = 
-        let handler value = 
-          try 
+      let andGuard f formatError (result: Result<'Err, 'ValueA>): Result<'Err, 'ValueB> =
+        let handler value =
+          try
             Success(f value)
           with e -> Error(formatError e)
         result |> andThen handler
       
       let andTry f formatError finally' (result: Result<'Err, 'ValueA>): Result<'Err, 'ValueB> = 
         let handler value = 
-          try 
-            try 
+          try
+            try
               Success(f value)
             with e -> Error(formatError e)
           finally

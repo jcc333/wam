@@ -13,16 +13,19 @@
     <TargetFSharpCoreVersion>4.4.1.0</TargetFSharpCoreVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Name>PrologFrontend</Name>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <Tailcalls>false</Tailcalls>
+    <Optimize>true</Optimize>
+    <Tailcalls>true</Tailcalls>
     <OutputPath>bin\$(Configuration)\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <WarningLevel>3</WarningLevel>
+    <WarningLevel>5</WarningLevel>
     <DocumentationFile>bin\$(Configuration)\$(AssemblyName).XML</DocumentationFile>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsAsErrors />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -86,14 +89,14 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\WAMUtil\WAMUtil.fsproj">
-      <Name>WAMUtil</Name>
-      <Project>{9dd47841-d9e4-4dd5-a06f-258523be6854}</Project>
-      <Private>True</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\WAM\PrologAST.fsproj">
+    <ProjectReference Include="..\PrologAST\PrologAST.fsproj">
       <Name>PrologAST</Name>
       <Project>{2e70ef42-ecea-45a1-8157-6f9b9a54c08c}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\WAMUtil\Util.fsproj">
+      <Name>Util</Name>
+      <Project>{9dd47841-d9e4-4dd5-a06f-258523be6854}</Project>
       <Private>True</Private>
     </ProjectReference>
   </ItemGroup>
