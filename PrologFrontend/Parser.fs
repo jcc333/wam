@@ -18,15 +18,15 @@ module Parser =
     open PrologAST.Term
 
     module Atom =
-        let emptyTuple = pstring "{}" >>% Atom.EmptyList
-        let emptyList = pstring "[]" >>% Atom.EmptyTuple
+        let emptyTuple<'a> : Parser<Atom, 'a> = pstring "{}" >>% EmptyList
+        let emptyList<'a> : Parser<Atom, 'a> = pstring "[]" >>% EmptyTuple
 
-        let alphaNumericOrUnderscore = regex "[a-z][a-zA-Z0-9_]*" |>> Atom.Symbol
+        let alphaNumericOrUnderscore<'a> : Parser<Atom, 'a> = regex "[a-z][a-zA-Z0-9_]*" |>> Symbol
 
-        let specialCharacters = anyOf "#$&*-./:<->?@^~\\" |> many1Chars |>> Atom.Symbol
+        let specialCharacters<'a> : Parser<Atom, 'a> = anyOf "#$&*-./:<->?@^~\\" |> many1Chars |>> Symbol
 
-        let normalChar = satisfy (fun c -> c <> '\\' && c <> ''') |>> Some
-        let unescape c = match c with
+        let normalChar<'a> : Parser<char option, 'a> = satisfy (fun c -> c <> '\\' && c <> ''') |>> Some
+        let unescape(c: char): char = match c with
                          | 'a' -> '\a'
                          | 'b' -> '\b'
                          | 'f' -> '\f'
@@ -37,26 +37,26 @@ module Parser =
                          | '\\'-> '\\'
                          | ''' -> '''
                          | c   -> c
-        let escapedChar = pstring "\\" >>. (anyOf "\\nrt\"" |>> unescape |>> Some)
+        let escapedChar<'a> : Parser<char option, 'a> = pstring "\\" >>. (anyOf "\\nrt\"" |>> unescape |>> Some)
 
-        let lineBreak =
+        let lineBreak<'a> : Parser<char option, 'a> =
             let discard _ = None
             pstring "\\\n" |>> discard
 
-        let atomBody = (many (normalChar <|> lineBreak <|> escapedChar))
+        let atomBody<'a> : Parser<char option list, 'a> = (many (normalChar <|> lineBreak <|> escapedChar))
 
-        let quoted = between (pstring "'") (pstring "'") atomBody |>> string |>> Atom.Symbol
+        let quoted<'a> : Parser<Atom, 'a> = between (pstring "'") (pstring "'") atomBody |>> string |>> Symbol
 
-        let parser = emptyTuple <|> emptyList <|> alphaNumericOrUnderscore <|> specialCharacters <|> quoted
+        let parser<'a> : Parser<Atom, 'a> = emptyTuple <|> emptyList <|> alphaNumericOrUnderscore <|> specialCharacters <|> quoted
 
 
     module Number =
-        let float = regex "[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?" |>> Double.Parse |>> Number.Double
-        let integer = regex "[-+]?[0-9]+" |>> Int64.Parse |>> Number.Int
-        let parser = float <|> integer
+        let float<'a> : Parser<Number, 'a> = regex "[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?" |>> Double.Parse |>> Double
+        let integer<'a> : Parser<Number, 'a> = regex "[-+]?[0-9]+" |>> Int64.Parse |>> Int
+        let parser<'a> : Parser<Number, 'a> = float <|> integer
 
     module Str =
-        let parser =
+        let parser<'a> : Parser<Str, 'a> =
             let normalChar = satisfy (fun c -> c <> '\\' && c <> '"')
             let unescape c = match c with
                              | 'n' -> '\n'
@@ -68,9 +68,9 @@ module Parser =
                     (manyChars (normalChar <|> escapedChar)) |>> Str
             
     module Var =
-        let anon = pstring "_" >>% Anon
-        let named = regex "[A-Z_][a-zA-Z0-9_]*" |>> Named
-        let parser = anon <|> named
+        let anon<'a> : Parser<Var, 'a> = pstring "_" >>% Anon
+        let named<'a> : Parser<Var, 'a> = regex "[A-Z_][a-zA-Z0-9_]*" |>> Named
+        let parser<'a> : Parser<Var, 'a> = anon <|> named
 
     module Term =
         open Atom
@@ -78,18 +78,20 @@ module Parser =
         open Str
         open Var
 
-        let rec parser = 
-            (Number.parser |>> Term.NumberTerm) <|>
-            (Str.parser |>> StrTerm) <|>
-            (Var.parser |>> VarTerm) <|>
-            (Atom.parser |>> AtomTerm) <|>
-            (app |>> AppTerm)
-        and app = FParsec.Primitives.parse.Delay(fun() ->
-            let lparen = pstring "("
-            let rparen = pstring ")"
-            let parens = between lparen rparen
-            let arguments: Parser<Term list, obj> = sepBy parser (pstring ",")
-            (Atom.parser .>>. parens arguments)
-            )
+        let parser<'a> : Parser<Term, 'a> =
+            let rec loop =
+                (Number.parser |>> Term.NumberTerm) <|>
+                (Str.parser |>> StrTerm) <|>
+                (Var.parser |>> VarTerm) <|>
+                (Atom.parser |>> AtomTerm) <|>
+                (app |>> AppTerm)
+            and app = FParsec.Primitives.parse.Delay(fun() ->
+                let lparen = pstring "("
+                let rparen = pstring ")"
+                let parens = between lparen rparen
+                let arguments: Parser<Term list, 'a> = sepBy loop (pstring ",")
+                (Atom.parser .>>. parens arguments)
+                )
+            loop
 
-    let parser<'t> = Term.parser
+    let parser<'a> : Parser<Term, 'a> = Term.parser

@@ -1,4 +1,4 @@
-﻿module Parser
+﻿module ParserTest
     open PrologAST
     open PrologFrontend
 
@@ -6,12 +6,9 @@
     open FParsec.CharParsers
     open System.Threading
 
-    open FsCheck
     open NUnit.Framework
 
 
-    [<TestFixture>]
-    type Tests() =
         [<Test>]
         let ``Test that a basic integer can be parsed``() =
             let expectedTerm = Some(AtomTerm(Atom.Symbol("atom")))
