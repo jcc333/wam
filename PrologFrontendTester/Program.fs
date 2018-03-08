@@ -11,13 +11,13 @@ open PrologFrontend.Parser
 
 open Util
 
-let readPrompt(s: string) = Console.Write s ; Console.ReadLine() 
+let readPrompt(s: String) = Console.Write s ; Console.ReadLine() 
 
-let parseAndPrint =
-    (run parser) >>
-    (fun t -> t.ToString) >>
-    Console.Write >>
-    Console.WriteLine
+let parse = run parser
+
+let print = function
+| ParserResult.Success(term, _, _) -> printfn "%A\n" term
+| ParserResult.Failure(errorAsString, _, _) -> printfn "%s" errorAsString
 
 let rec until pred prompter evaluator = 
     let result = prompter() 
@@ -28,9 +28,10 @@ let rec until pred prompter evaluator =
 let runRepl() =  
     let quittingTime(s: String) = "quit" = s.ToLower()
     let prompt() = readPrompt "PrologFrontend>>> "
-    until quittingTime prompt parseAndPrint
+    let parseShowPrint = parse >> print
+    until quittingTime prompt parseShowPrint
 
 [<EntryPoint>] 
-let main(args: string[]) = 
+let main(args: String[]) = 
     runRepl() 
     0

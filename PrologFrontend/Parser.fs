@@ -17,13 +17,14 @@ module Parser =
     open PrologAST.Var
     open PrologAST.Term
 
+    module Symbol = 
+        let alphaNumericOrUnderscore<'a> : Parser<Symbol, 'a> = regex "[a-z][a-zA-Z0-9_]*" |>> Symbol
+        let specialCharacters<'a> : Parser<Symbol, 'a> = anyOf "#$&*-./:<->?@^~\\" |> many1Chars |>> Symbol
+        let parser<'a> : Parser<Symbol, 'a> = spaces >>. (alphaNumericOrUnderscore <|> specialCharacters)
+
     module Atom =
         let emptyTuple<'a> : Parser<Atom, 'a> = pstring "{}" >>% EmptyList
         let emptyList<'a> : Parser<Atom, 'a> = pstring "[]" >>% EmptyTuple
-
-        let alphaNumericOrUnderscore<'a> : Parser<Atom, 'a> = regex "[a-z][a-zA-Z0-9_]*" |>> Symbol
-
-        let specialCharacters<'a> : Parser<Atom, 'a> = anyOf "#$&*-./:<->?@^~\\" |> many1Chars |>> Symbol
 
         let normalChar<'a> : Parser<char option, 'a> = satisfy (fun c -> c <> '\\' && c <> ''') |>> Some
         let unescape(c: char): char = match c with
@@ -41,19 +42,21 @@ module Parser =
 
         let lineBreak<'a> : Parser<char option, 'a> =
             let discard _ = None
-            pstring "\\\n" |>> discard
+            regex "\\\n" |>> discard
 
         let atomBody<'a> : Parser<char option list, 'a> = (many (normalChar <|> lineBreak <|> escapedChar))
 
-        let quoted<'a> : Parser<Atom, 'a> = between (pstring "'") (pstring "'") atomBody |>> string |>> Symbol
+        let quoted<'a> : Parser<Atom, 'a> = between (pstring "'") (pstring "'") atomBody |>> string |>> Symbol |>> SymbolAtom
 
-        let parser<'a> : Parser<Atom, 'a> = emptyTuple <|> emptyList <|> alphaNumericOrUnderscore <|> specialCharacters <|> quoted
+        let symbolAtom<'a> : Parser<Atom, 'a> = Symbol.parser |>> SymbolAtom
+
+        let parser<'a> : Parser<Atom, 'a> = spaces >>. (emptyTuple <|> emptyList <|> symbolAtom <|> quoted)
 
 
     module Number =
-        let float<'a> : Parser<Number, 'a> = regex "[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?" |>> Double.Parse |>> Double
+        let float<'a> : Parser<Number, 'a> = regex "[-+]?[0-9]*\\.[0-9]+([eE][-+]?[0-9]+)?" |>> Double.Parse |>> Double
         let integer<'a> : Parser<Number, 'a> = regex "[-+]?[0-9]+" |>> Int64.Parse |>> Int
-        let parser<'a> : Parser<Number, 'a> = float <|> integer
+        let parser<'a> : Parser<Number, 'a> = spaces >>. (float <|> integer)
 
     module Str =
         let parser<'a> : Parser<Str, 'a> =
@@ -70,7 +73,7 @@ module Parser =
     module Var =
         let anon<'a> : Parser<Var, 'a> = pstring "_" >>% Anon
         let named<'a> : Parser<Var, 'a> = regex "[A-Z_][a-zA-Z0-9_]*" |>> Named
-        let parser<'a> : Parser<Var, 'a> = anon <|> named
+        let parser<'a> : Parser<Var, 'a> = spaces >>. (anon <|> named)
 
     module Term =
         open Atom
@@ -79,18 +82,20 @@ module Parser =
         open Var
 
         let parser<'a> : Parser<Term, 'a> =
+            let nonAppAtom = Atom.parser .>>? notFollowedBy (pstring "(") |>> AtomTerm
             let rec loop =
                 (Number.parser |>> Term.NumberTerm) <|>
+                nonAppAtom <|>
                 (Str.parser |>> StrTerm) <|>
                 (Var.parser |>> VarTerm) <|>
-                (Atom.parser |>> AtomTerm) <|>
-                (app |>> AppTerm)
+                app 
             and app = FParsec.Primitives.parse.Delay(fun() ->
                 let lparen = pstring "("
                 let rparen = pstring ")"
                 let parens = between lparen rparen
-                let arguments: Parser<Term list, 'a> = sepBy loop (pstring ",")
-                (Atom.parser .>>. parens arguments)
+                let commaSep = spaces >>. (pstring ",")
+                let arguments: Parser<Term list, 'a> = sepBy loop commaSep
+                (Symbol.parser .>>. parens arguments) |>> AppTerm
                 )
             loop
 

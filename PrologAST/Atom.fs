@@ -2,7 +2,10 @@
 
 [<AutoOpen>]
 module Atom =
+
+    type Symbol = Symbol of string
+
     type Atom =
-    | Symbol of string
+    | SymbolAtom of Symbol
     | EmptyList
     | EmptyTuple
